@@ -39,17 +39,8 @@ export async function runMigrations(): Promise<void> {
   try {
     await client.query('BEGIN');
     await ensureMigrationsTable(client);
-    await client.query('COMMIT');
-  } catch (error) {
-    await client.query('ROLLBACK');
-    client.release();
-    throw error;
-  }
-
-  try {
     const migrations = await listMigrationFiles();
     for (const migration of migrations) {
-      await client.query('BEGIN');
       const exists = await client.query<{ version: string }>(
         'SELECT version FROM schema_migrations WHERE version = $1 LIMIT 1',
         [migration.name]
@@ -61,8 +52,8 @@ export async function runMigrations(): Promise<void> {
           [migration.name]
         );
       }
-      await client.query('COMMIT');
     }
+    await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
