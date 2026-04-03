@@ -100,3 +100,5 @@ OPENAI_API_KEY=your_key docker-compose up
 - Required backend env vars: `OPENAI_API_KEY`, `DATABASE_URL`.
 - Database migrations are versioned SQL files under `backend/src/db/migrations` and run at backend startup.
 - Manual migration command: `cd backend && npm run migrate`.
+- Optional migration path override: set `DB_MIGRATIONS_DIR` when runtime layout differs.
+- Backend startup DB retries are configurable with `STARTUP_DB_RETRY_ATTEMPTS` and `STARTUP_DB_RETRY_DELAY_MS`.

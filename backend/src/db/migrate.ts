@@ -2,11 +2,41 @@ import fs from 'fs/promises';
 import path from 'path';
 import { PoolClient } from 'pg';
 import { pool } from './client';
-const migrationsDir = path.resolve(__dirname, 'migrations');
 
 interface MigrationFile {
   name: string;
   sql: string;
+}
+
+async function directoryExists(dirPath: string): Promise<boolean> {
+  try {
+    const stat = await fs.stat(dirPath);
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+async function resolveMigrationsDir(): Promise<string> {
+  const configuredDir = process.env.DB_MIGRATIONS_DIR?.trim();
+  const candidateDirs = [
+    configuredDir ? path.resolve(configuredDir) : '',
+    path.resolve(__dirname, 'migrations'),
+    path.resolve(__dirname, '..', '..', 'src', 'db', 'migrations'),
+    path.resolve(process.cwd(), 'src', 'db', 'migrations'),
+    path.resolve(process.cwd(), 'dist', 'db', 'migrations'),
+    path.resolve(process.cwd(), 'backend', 'src', 'db', 'migrations'),
+  ].filter(Boolean);
+
+  for (const dir of candidateDirs) {
+    if (await directoryExists(dir)) {
+      return dir;
+    }
+  }
+
+  throw new Error(
+    `No migration directory found. Checked: ${candidateDirs.join(', ')}`
+  );
 }
 
 async function ensureMigrationsTable(client: PoolClient): Promise<void> {
@@ -19,11 +49,16 @@ async function ensureMigrationsTable(client: PoolClient): Promise<void> {
 }
 
 async function listMigrationFiles(): Promise<MigrationFile[]> {
+  const migrationsDir = await resolveMigrationsDir();
   const entries = await fs.readdir(migrationsDir, { withFileTypes: true });
   const files = entries
     .filter((entry) => entry.isFile() && entry.name.endsWith('.sql'))
     .map((entry) => entry.name)
     .sort((a, b) => a.localeCompare(b));
+
+  if (files.length === 0) {
+    throw new Error(`No .sql migration files found in ${migrationsDir}`);
+  }
 
   const loaded: MigrationFile[] = [];
   for (const fileName of files) {

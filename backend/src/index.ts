@@ -12,6 +12,8 @@ import { runMigrations } from './db/migrate';
 const app = express();
 const PORT = process.env.PORT || 3001;
 const REQUIRED_ENV_VARS = ['OPENAI_API_KEY', 'DATABASE_URL'];
+const STARTUP_DB_RETRY_ATTEMPTS = Number(process.env.STARTUP_DB_RETRY_ATTEMPTS || 10);
+const STARTUP_DB_RETRY_DELAY_MS = Number(process.env.STARTUP_DB_RETRY_DELAY_MS || 3000);
 
 for (const key of REQUIRED_ENV_VARS) {
   if (!process.env[key]) {
@@ -42,10 +44,37 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
   res.status(500).json({ error: 'Internal server error' });
 });
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function initializeDatabaseWithRetry(): Promise<void> {
+  const attempts = Number.isFinite(STARTUP_DB_RETRY_ATTEMPTS) && STARTUP_DB_RETRY_ATTEMPTS > 0
+    ? Math.floor(STARTUP_DB_RETRY_ATTEMPTS)
+    : 1;
+  const delayMs = Number.isFinite(STARTUP_DB_RETRY_DELAY_MS) && STARTUP_DB_RETRY_DELAY_MS > 0
+    ? Math.floor(STARTUP_DB_RETRY_DELAY_MS)
+    : 3000;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await testDatabaseConnection();
+      await runMigrations();
+      return;
+    } catch (error) {
+      if (attempt === attempts) throw error;
+      console.warn(
+        `Database startup attempt ${attempt}/${attempts} failed. Retrying in ${delayMs}ms...`,
+        error
+      );
+      await sleep(delayMs);
+    }
+  }
+}
+
 const server = app.listen(PORT, async () => {
   try {
-    await runMigrations();
-    await testDatabaseConnection();
+    await initializeDatabaseWithRetry();
     console.log(`SAD-GENIUS API running on port ${PORT}`);
   } catch (error) {
     console.error('Database connection failed during startup:', error);
