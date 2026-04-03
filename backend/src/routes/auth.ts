@@ -1,0 +1,83 @@
+import { Router, Request, Response } from 'express';
+import { z } from 'zod';
+import { authStore } from '../services/authStore';
+import { requireAuth } from '../middleware/auth';
+import { clearAuthCookie, getRequestToken, setAuthCookie } from '../auth/session';
+
+const router = Router();
+
+const CredentialsSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+
+function requireAuthenticatedUser(req: Request, res: Response): { id: string; email: string } | null {
+  if (!req.user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return null;
+  }
+  return req.user;
+}
+
+router.post('/register', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = CredentialsSchema.parse(req.body);
+    const user = await authStore.register(email, password);
+    const token = await authStore.issueToken(user.id);
+    setAuthCookie(res, token);
+    return res.status(201).json({
+      token,
+      user: { id: user.id, email: user.email },
+    });
+  } catch (err: unknown) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: err.errors });
+    }
+    if (err instanceof Error && err.message === 'Email already registered') {
+      return res.status(409).json({ error: err.message });
+    }
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = CredentialsSchema.parse(req.body);
+    const user = await authStore.login(email, password);
+    if (!user) return res.status(401).json({ error: 'Invalid email or password' });
+
+    const token = await authStore.issueToken(user.id);
+    setAuthCookie(res, token);
+    return res.json({
+      token,
+      user: { id: user.id, email: user.email },
+    });
+  } catch (err: unknown) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: err.errors });
+    }
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/me', requireAuth, (req: Request, res: Response) => {
+  const user = requireAuthenticatedUser(req, res);
+  if (!user) return;
+  return res.json({ user: { id: user.id, email: user.email } });
+});
+
+router.post('/logout', async (req: Request, res: Response) => {
+  try {
+    const token = getRequestToken(req);
+    if (token) {
+      await authStore.revokeToken(token);
+    }
+    clearAuthCookie(res);
+    return res.status(204).send();
+  } catch {
+    clearAuthCookie(res);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+export default router;
