@@ -75,6 +75,109 @@ OPENAI_API_KEY=your_key docker-compose up
 4. Watch agents work in real-time
 5. View generated diagrams and full system design output
 
+## Git Branching, CI/CD and Release Flow
+
+### Branch model
+
+- `main`: production/live branch only.
+- `develop`: integration and staging branch.
+- `feature/*`: feature development branches created from `develop`.
+- `hotfix/*`: urgent production fixes created from `main`.
+
+### Required branch protection (GitHub settings)
+
+Configure branch rules in GitHub for `main` and `develop`:
+
+- Require pull requests before merging (disable direct pushes).
+- Require status checks to pass:
+  - `Backend Build`
+  - `Frontend Lint and Build`
+- Require conversation resolution before merge.
+- For `main`, require at least 1 approving review.
+
+### CI workflow
+
+- Workflow file: `.github/workflows/ci.yml`
+- Runs on pull requests targeting `develop` and `main`.
+- Checks:
+  - Backend TypeScript build (`backend/npm run build`)
+  - Frontend lint + build (`frontend/npm run lint && npm run build`)
+- Uses npm dependency caching for faster runs.
+
+### Run Remaining Work workflow
+
+- Workflow file: `.github/workflows/run-remaining.yml`
+- Purpose: run any remaining operational work in one pipeline:
+  - Remaining CI checks (backend build + frontend lint/build)
+  - Remaining app work from queue/state (projects still `running`)
+  - Remaining TODO items/migrations/scripts (versioned DB migrations + backend runner script)
+  - Remaining deployment steps (staging/production deploy webhook + health check)
+- Triggers:
+  - **On push** to `develop` and `main` (automatic)
+  - **On schedule** every hour (`0 * * * *`)
+  - **Manual trigger** (`workflow_dispatch`) with toggles:
+    - `run_ci_checks`
+    - `run_backend_remaining`
+    - `run_deploy`
+    - `environment` (`staging` or `production`)
+    - `image_tag` (optional)
+- Branch/environment mapping for automatic runs:
+  - `develop` → `staging`
+  - `main` → `production`
+- Required secrets for this workflow:
+  - `DATABASE_URL`
+  - `OPENAI_API_KEY`
+  - `STAGING_DEPLOY_WEBHOOK_URL`
+  - `PRODUCTION_DEPLOY_WEBHOOK_URL`
+- Optional repository/environment variables:
+  - `RUN_REMAINING_BATCH_SIZE` (default: `10`)
+  - `RUN_REMAINING_MAX_BATCHES` (default: `20`)
+  - `DB_MIGRATIONS_DIR` (optional migration directory override)
+
+### CD workflow
+
+- Workflow file: `.github/workflows/deploy.yml`
+- Automatic deploy triggers:
+  - Push to `develop` → `staging` environment deploy
+  - Push to `main` → `production` environment deploy
+- Manual deploy trigger:
+  - `workflow_dispatch` with environment choice and optional image tag
+- Health check is required after deploy and fails the job if unhealthy.
+
+### Rollback workflow
+
+- Workflow file: `.github/workflows/rollback.yml`
+- Manual rollback trigger (`workflow_dispatch`) with:
+  - Target environment (`staging` or `production`)
+  - Previous successful `image_tag`
+- Performs rollback deploy webhook call, then verifies health check.
+
+### Environment and secret requirements
+
+In GitHub **Environments** (`staging`, `production`) set:
+
+- Environment variable:
+  - `HEALTHCHECK_URL` (example: `https://api.example.com/api/health`)
+  - `HEALTHCHECK_RETRIES` (optional, defaults to `10`)
+  - `HEALTHCHECK_RETRY_DELAY_SECONDS` (optional, defaults to `15`)
+- Environment secrets:
+  - `STAGING_DEPLOY_WEBHOOK_URL`
+  - `PRODUCTION_DEPLOY_WEBHOOK_URL`
+
+Set required reviewers on the `production` environment to enforce deployment approvals.
+
+### Team process
+
+1. Create branch from `develop`: `feature/<name>`.
+2. Open PR into `develop`.
+3. CI must pass before merge.
+4. Validate in staging.
+5. Open PR from `develop` into `main` for production promotion.
+6. For urgent production fixes:
+   - Create `hotfix/<name>` from `main`
+   - PR to `main`
+   - Back-merge to `develop`
+
 ## Security & Tenant Isolation
 
 > ✅ **Production-ready auth/session baseline**  

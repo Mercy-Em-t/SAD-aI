@@ -1,0 +1,80 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to rollback"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      image_tag:
+        description: "Previously successful image tag"
+        required: true
+        type: string
+
+concurrency:
+  group: rollback-${{ github.event.inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    name: Rollback deployment
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.environment }}
+    permissions:
+      contents: read
+    env:
+      DEPLOY_ENV: ${{ github.event.inputs.environment }}
+      IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+      HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
+      HEALTHCHECK_RETRIES: ${{ vars.HEALTHCHECK_RETRIES || '10' }}
+      HEALTHCHECK_RETRY_DELAY_SECONDS: ${{ vars.HEALTHCHECK_RETRY_DELAY_SECONDS || '15' }}
+      STAGING_DEPLOY_WEBHOOK_URL: ${{ secrets.STAGING_DEPLOY_WEBHOOK_URL }}
+      PRODUCTION_DEPLOY_WEBHOOK_URL: ${{ secrets.PRODUCTION_DEPLOY_WEBHOOK_URL }}
+    steps:
+      - name: Resolve deploy webhook
+        id: webhook
+        run: |
+          if [ "${DEPLOY_ENV}" = "production" ]; then
+            echo "url=${PRODUCTION_DEPLOY_WEBHOOK_URL}" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=${STAGING_DEPLOY_WEBHOOK_URL}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate rollback configuration
+        run: |
+          if [ -z "${{ steps.webhook.outputs.url }}" ]; then
+            echo "Missing deploy webhook secret for ${DEPLOY_ENV}."
+            exit 1
+          fi
+          if [ -z "${HEALTHCHECK_URL}" ]; then
+            echo "Missing HEALTHCHECK_URL environment variable in ${DEPLOY_ENV} environment."
+            exit 1
+          fi
+
+      - name: Trigger rollback deploy
+        run: |
+          curl --fail --show-error --silent \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"environment\":\"${DEPLOY_ENV}\",\"rollback\":true,\"image_tag\":\"${IMAGE_TAG}\"}" \
+            "${{ steps.webhook.outputs.url }}"
+
+      - name: Health check after rollback
+        run: |
+          for i in $(seq 1 "${HEALTHCHECK_RETRIES}"); do
+            code=$(curl --silent --show-error --output /tmp/health.json --write-out "%{http_code}" "${HEALTHCHECK_URL}")
+            if [ "$code" = "200" ]; then
+              echo "Rollback health check passed."
+              cat /tmp/health.json
+              exit 0
+            fi
+            echo "Rollback health check attempt ${i}/${HEALTHCHECK_RETRIES} failed with status ${code}. Retrying in ${HEALTHCHECK_RETRY_DELAY_SECONDS}s..."
+            sleep "${HEALTHCHECK_RETRY_DELAY_SECONDS}"
+          done
+          echo "Rollback health check failed after retries."
+          exit 1
