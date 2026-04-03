@@ -219,6 +219,45 @@ class ProjectStore {
       ]
     );
   }
+
+  async getRemainingRunning(limit = 25): Promise<Project[]> {
+    const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 25;
+    const projectsResult = await query<{
+      id: string;
+      user_id: string;
+      name: string;
+      status: 'running' | 'completed' | 'failed';
+      spec: Record<string, unknown>;
+      final_output: FinalOutput | null;
+      created_at: string;
+      completed_at: string | null;
+    }>(
+      `SELECT id, user_id, name, status, spec, final_output, created_at, completed_at
+       FROM projects
+       WHERE status = 'running' AND completed_at IS NULL
+       ORDER BY created_at ASC
+       LIMIT $1`,
+      [safeLimit]
+    );
+
+    if (projectsResult.rowCount === 0) return [];
+
+    return projectsResult.rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      name: row.name,
+      status: row.status,
+      spec: row.spec,
+      stages: [],
+      finalOutput: row.final_output ?? undefined,
+      createdAt: new Date(row.created_at).toISOString(),
+      completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : undefined,
+    }));
+  }
+
+  async clearStages(projectId: string): Promise<void> {
+    await query('DELETE FROM stages WHERE project_id = $1', [projectId]);
+  }
 }
 
 export const projectStore = new ProjectStore();

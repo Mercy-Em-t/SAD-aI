@@ -104,6 +104,32 @@ Configure branch rules in GitHub for `main` and `develop`:
   - Frontend lint + build (`frontend/npm run lint && npm run build`)
 - Uses npm dependency caching for faster runs.
 
+### Run Remaining Work workflow
+
+- Workflow file: `.github/workflows/run-remaining.yml`
+- Purpose: run any remaining operational work in one pipeline:
+  - Remaining CI checks (backend build + frontend lint/build)
+  - Remaining app work from queue/state (projects still `running`)
+  - Remaining TODO items/migrations/scripts (versioned DB migrations + backend runner script)
+  - Remaining deployment steps (staging/production deploy webhook + health check)
+- Triggers:
+  - **On push** to `develop` and `main` (automatic)
+  - **On schedule** every hour (`0 * * * *`)
+  - **Manual trigger** (`workflow_dispatch`) with toggles:
+    - `run_ci_checks`
+    - `run_backend_remaining`
+    - `run_deploy`
+    - `environment` (`staging` or `production`)
+    - `image_tag` (optional)
+- Branch/environment mapping for automatic runs:
+  - `develop` → `staging`
+  - `main` → `production`
+- Required secrets for this workflow:
+  - `DATABASE_URL`
+  - `OPENAI_API_KEY`
+  - `STAGING_DEPLOY_WEBHOOK_URL`
+  - `PRODUCTION_DEPLOY_WEBHOOK_URL`
+
 ### CD workflow
 
 - Workflow file: `.github/workflows/deploy.yml`
