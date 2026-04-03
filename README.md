@@ -65,6 +65,7 @@ Then open http://localhost:3000
 ```bash
 OPENAI_API_KEY=your_key docker-compose up
 ```
+> The backend runs versioned DB migrations automatically on startup.
 
 ## Usage
 
@@ -84,6 +85,7 @@ OPENAI_API_KEY=your_key docker-compose up
   - `POST /api/auth/register`
   - `POST /api/auth/login`
   - `GET /api/auth/me`
+  - `POST /api/auth/logout`
 - Project endpoints now require `Authorization: Bearer <token>`.
 - Each project is bound to the authenticated user (`userId`), and users can only list/read/create their own projects.
 - Cross-account access is denied (non-owned project IDs return not found).
@@ -96,3 +98,5 @@ OPENAI_API_KEY=your_key docker-compose up
 - Frontend uses cookie-first auth in production (`withCredentials: true` + backend `httpOnly` cookie issuance).
 - Keep `NEXT_PUBLIC_ALLOW_INSECURE_LOCALSTORAGE_AUTH` unset in production.
 - Required backend env vars: `OPENAI_API_KEY`, `DATABASE_URL`.
+- Database migrations are versioned SQL files under `backend/src/db/migrations` and run at backend startup.
+- Manual migration command: `cd backend && npm run migrate`.

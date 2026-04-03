@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import LogoutButton from '../components/LogoutButton'
 
 export const metadata: Metadata = {
   title: 'SAD-GENIUS AI – Multi-Agent System Engineer',
@@ -27,6 +28,7 @@ export default function RootLayout({
             <a href="/" className="hover:text-white transition-colors">Home</a>
             <a href="/auth" className="hover:text-white transition-colors">Login</a>
             <a href="/projects" className="hover:text-white transition-colors">Projects</a>
+            <LogoutButton />
             <a href="/new" className="bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded-lg transition-colors">
               + New Project
             </a>

@@ -1,17 +1,27 @@
 import { Pool, QueryResult, QueryResultRow } from 'pg';
 
-const databaseUrl = process.env.DATABASE_URL;
+let poolInstance: Pool | null = null;
 
-if (!databaseUrl) {
-  throw new Error('Missing required environment variable: DATABASE_URL');
+function getPool(): Pool {
+  if (poolInstance) return poolInstance;
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('Missing required environment variable: DATABASE_URL');
+  }
+  const sslEnabled = process.env.DATABASE_SSL === 'true';
+  poolInstance = new Pool({
+    connectionString: databaseUrl,
+    ssl: sslEnabled ? { rejectUnauthorized: false } : undefined,
+  });
+  return poolInstance;
 }
 
-const sslEnabled = process.env.DATABASE_SSL === 'true';
-
-export const pool = new Pool({
-  connectionString: databaseUrl,
-  ssl: sslEnabled ? { rejectUnauthorized: false } : undefined,
-});
+export const pool = {
+  query: <T extends QueryResultRow = QueryResultRow>(text: string, params?: unknown[]) =>
+    getPool().query<T>(text, params),
+  connect: () => getPool().connect(),
+  end: () => (poolInstance ? poolInstance.end() : Promise.resolve()),
+};
 
 export async function query<T extends QueryResultRow = QueryResultRow>(
   text: string,

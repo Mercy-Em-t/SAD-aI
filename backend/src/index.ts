@@ -2,12 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+dotenv.config();
 import projectsRouter from './routes/projects';
 import healthRouter from './routes/health';
 import authRouter from './routes/auth';
 import { testDatabaseConnection, pool } from './db/client';
-
-dotenv.config();
+import { runMigrations } from './db/migrate';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -44,6 +44,7 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 
 const server = app.listen(PORT, async () => {
   try {
+    await runMigrations();
     await testDatabaseConnection();
     console.log(`SAD-GENIUS API running on port ${PORT}`);
   } catch (error) {
