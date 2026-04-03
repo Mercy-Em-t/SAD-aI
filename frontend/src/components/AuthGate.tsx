@@ -2,13 +2,14 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getAuthToken } from '../lib/auth'
+import { getAuthToken, getAuthUser } from '../lib/auth'
 
 export default function AuthGate() {
   const router = useRouter()
 
   useEffect(() => {
-    if (!getAuthToken()) {
+    const hasSession = !!getAuthToken() || !!getAuthUser()
+    if (!hasSession) {
       router.replace('/auth')
     }
   }, [router])

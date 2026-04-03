@@ -76,9 +76,9 @@ OPENAI_API_KEY=your_key docker-compose up
 
 ## Security & Tenant Isolation
 
-> ⚠️ **IMPORTANT (Production)**  
-> The current implementation uses an in-memory auth/session store and frontend `localStorage` token storage for prototype simplicity.  
-> Before production deployment, migrate to persistent PostgreSQL-backed auth/session storage and secure `httpOnly` cookie-based auth.
+> ✅ **Production-ready auth/session baseline**  
+> Auth/user/session and project data are persisted in PostgreSQL.  
+> Backend now issues secure `httpOnly` session cookies (and still supports bearer tokens for API clients).
 
 - Authentication endpoints:
   - `POST /api/auth/register`
@@ -88,9 +88,11 @@ OPENAI_API_KEY=your_key docker-compose up
 - Each project is bound to the authenticated user (`userId`), and users can only list/read/create their own projects.
 - Cross-account access is denied (non-owned project IDs return not found).
 - Session lifetime is configurable with `AUTH_SESSION_DURATION_MS` (defaults to 2 hours).
-- In production builds, insecure localStorage auth is blocked by default unless `NEXT_PUBLIC_ALLOW_INSECURE_LOCALSTORAGE_AUTH=true` is explicitly set.
+- In production builds, insecure localStorage token auth is disabled by default unless `NEXT_PUBLIC_ALLOW_INSECURE_LOCALSTORAGE_AUTH=true` is explicitly set.
 
 ### Production security notes
 
-- Current auth/user/session storage is in-memory and resets on restart; replace with persistent PostgreSQL-backed auth/session storage before production deployment.
-- Current frontend stores bearer token in `localStorage` for simplicity; for production SaaS, move to secure `httpOnly` cookies and apply strong CSP/XSS protections.
+- Auth, sessions, and projects are persisted in PostgreSQL and survive restarts.
+- Frontend uses cookie-first auth in production (`withCredentials: true` + backend `httpOnly` cookie issuance).
+- Keep `NEXT_PUBLIC_ALLOW_INSECURE_LOCALSTORAGE_AUTH` unset in production.
+- Required backend env vars: `OPENAI_API_KEY`, `DATABASE_URL`.

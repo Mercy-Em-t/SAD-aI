@@ -1,8 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'SAD-GENIUS AI – Multi-Agent System Engineer',
@@ -18,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className="font-sans">
         <nav className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-3">
             <span className="text-2xl">🧠</span>

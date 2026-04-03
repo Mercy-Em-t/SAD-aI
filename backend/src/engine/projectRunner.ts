@@ -77,7 +77,7 @@ export class ProjectRunnerEngine {
         diagrams,
       };
 
-      projectStore.update(this.projectId, {
+      await projectStore.update(this.projectId, {
         status: 'completed',
         finalOutput,
         completedAt: new Date().toISOString(),
@@ -86,7 +86,10 @@ export class ProjectRunnerEngine {
       console.log(`[Runner] Project ${this.projectId} completed successfully`);
     } catch (err) {
       console.error(`[Runner] Project ${this.projectId} failed:`, err);
-      projectStore.update(this.projectId, { status: 'failed' });
+      await projectStore.update(this.projectId, {
+        status: 'failed',
+        completedAt: new Date().toISOString(),
+      });
     }
   }
 
@@ -106,7 +109,7 @@ export class ProjectRunnerEngine {
       attempts++;
     }
 
-    projectStore.addStage(this.projectId, {
+    await projectStore.addStage(this.projectId, {
       stage: stageName,
       output: result.output,
       score: result.score,

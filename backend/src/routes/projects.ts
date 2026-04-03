@@ -28,18 +28,18 @@ const SpecFormSchema = z.object({
 });
 
 // GET /api/projects - list all projects
-router.get('/', (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   const user = requireAuthenticatedUser(req, res);
   if (!user) return;
-  const projects = projectStore.getAllByUser(user.id);
+  const projects = await projectStore.getAllByUser(user.id);
   res.json({ projects });
 });
 
 // GET /api/projects/:id - get project detail
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
   const user = requireAuthenticatedUser(req, res);
   if (!user) return;
-  const project = projectStore.getById(req.params.id);
+  const project = await projectStore.getById(req.params.id);
   if (!project || project.userId !== user.id) {
     return res.status(404).json({ error: 'Project not found' });
   }
@@ -54,7 +54,7 @@ router.post('/', async (req: Request, res: Response) => {
     const spec = SpecFormSchema.parse(req.body);
     const projectId = uuidv4();
     
-    const project = projectStore.create({
+    const project = await projectStore.create({
       id: projectId,
       userId: user.id,
       name: spec.projectName,
@@ -66,7 +66,13 @@ router.post('/', async (req: Request, res: Response) => {
 
     // Run pipeline asynchronously
     const runner = new ProjectRunnerEngine(projectId, spec);
-    runner.run().catch(console.error);
+    runner.run().catch(async (err: unknown) => {
+      console.error(`[Runner] Project ${projectId} failed:`, err);
+      await projectStore.update(projectId, {
+        status: 'failed',
+        completedAt: new Date().toISOString(),
+      });
+    });
 
     res.status(201).json({ project });
   } catch (err: unknown) {

@@ -11,7 +11,7 @@ const USER_KEY = 'sad_genius_user';
 const ALLOW_INSECURE_LOCALSTORAGE_AUTH = process.env.NEXT_PUBLIC_ALLOW_INSECURE_LOCALSTORAGE_AUTH === 'true';
 
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production' && !ALLOW_INSECURE_LOCALSTORAGE_AUTH) {
-  throw new Error('SAD-GENIUS security enforcement: localStorage auth disabled in production. Use secure httpOnly cookie auth.');
+  console.error('SAD-GENIUS security warning: localStorage token auth is disabled in production. Using secure cookie-first auth.');
 }
 
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production' && ALLOW_INSECURE_LOCALSTORAGE_AUTH) {
@@ -20,12 +20,15 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production' && AL
 
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
+  if (process.env.NODE_ENV === 'production' && !ALLOW_INSECURE_LOCALSTORAGE_AUTH) return null;
   return localStorage.getItem(TOKEN_KEY);
 }
 
 export function setAuthSession(token: string, user: AuthUser): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(TOKEN_KEY, token);
+  if (process.env.NODE_ENV !== 'production' || ALLOW_INSECURE_LOCALSTORAGE_AUTH) {
+    localStorage.setItem(TOKEN_KEY, token);
+  }
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
@@ -33,6 +36,7 @@ export function clearAuthSession(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  document.cookie = 'sad_genius_session=; Max-Age=0; Path=/; SameSite=Lax';
 }
 
 export function getAuthUser(): AuthUser | null {
