@@ -242,13 +242,46 @@ class ProjectStore {
 
     if (projectsResult.rowCount === 0) return [];
 
+    const ids = projectsResult.rows.map((project) => project.id);
+    const stagesResult = await query<{
+      project_id: string;
+      stage: string;
+      output_json: Record<string, unknown>;
+      score_completeness: string | number | null;
+      score_clarity: string | number | null;
+      score_standard_compliance: string | number | null;
+      completed_at: string;
+    }>(
+      `SELECT project_id, stage, output_json, score_completeness, score_clarity, score_standard_compliance, completed_at
+       FROM stages
+       WHERE project_id = ANY($1::uuid[])
+       ORDER BY completed_at ASC`,
+      [ids]
+    );
+
+    const stagesByProject = new Map<string, StageOutput[]>();
+    for (const stageRow of stagesResult.rows) {
+      const list = stagesByProject.get(stageRow.project_id) ?? [];
+      list.push({
+        stage: stageRow.stage,
+        output: stageRow.output_json,
+        score: {
+          completeness: Number(stageRow.score_completeness ?? 0),
+          clarity: Number(stageRow.score_clarity ?? 0),
+          standardCompliance: Number(stageRow.score_standard_compliance ?? 0),
+        },
+        completedAt: new Date(stageRow.completed_at).toISOString(),
+      });
+      stagesByProject.set(stageRow.project_id, list);
+    }
+
     return projectsResult.rows.map((row) => ({
       id: row.id,
       userId: row.user_id,
       name: row.name,
       status: row.status,
       spec: row.spec,
-      stages: [],
+      stages: stagesByProject.get(row.id) ?? [],
       finalOutput: row.final_output ?? undefined,
       createdAt: new Date(row.created_at).toISOString(),
       completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : undefined,

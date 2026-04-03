@@ -32,16 +32,20 @@ async function processRemainingProjects(): Promise<number> {
 
     for (const project of remaining) {
       console.log(`[RunRemaining] Reprocessing project ${project.id}`);
-      await projectStore.clearStages(project.id);
-      await projectStore.update(project.id, {
-        status: 'running',
-        completedAt: undefined,
-        finalOutput: undefined,
-      });
+      try {
+        await projectStore.clearStages(project.id);
+        await projectStore.update(project.id, {
+          status: 'running',
+          completedAt: undefined,
+          finalOutput: undefined,
+        });
 
-      const runner = new ProjectRunnerEngine(project.id, project.spec);
-      await runner.run();
-      totalProcessed += 1;
+        const runner = new ProjectRunnerEngine(project.id, project.spec);
+        await runner.run();
+        totalProcessed += 1;
+      } catch (error) {
+        console.error(`[RunRemaining] Project ${project.id} failed during reprocessing:`, error);
+      }
     }
   }
 
