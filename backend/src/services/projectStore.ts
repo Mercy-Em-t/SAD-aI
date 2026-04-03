@@ -38,6 +38,8 @@ export interface DiagramOutput {
 
 import { query } from '../db/client';
 
+const DEFAULT_INCOMPLETE_RUNNING_PROJECTS_LIMIT = 25;
+
 class ProjectStore {
   async create(project: Project): Promise<Project> {
     await query(
@@ -220,8 +222,10 @@ class ProjectStore {
     );
   }
 
-  async getIncompleteRunningProjects(limit = 25): Promise<Project[]> {
-    const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 25;
+  async getIncompleteRunningProjects(limit = DEFAULT_INCOMPLETE_RUNNING_PROJECTS_LIMIT): Promise<Project[]> {
+    const safeLimit = Number.isFinite(limit) && limit > 0
+      ? Math.floor(limit)
+      : DEFAULT_INCOMPLETE_RUNNING_PROJECTS_LIMIT;
     const projectsResult = await query<{
       id: string;
       user_id: string;

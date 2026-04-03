@@ -129,6 +129,10 @@ Configure branch rules in GitHub for `main` and `develop`:
   - `OPENAI_API_KEY`
   - `STAGING_DEPLOY_WEBHOOK_URL`
   - `PRODUCTION_DEPLOY_WEBHOOK_URL`
+- Optional repository/environment variables:
+  - `RUN_REMAINING_BATCH_SIZE` (default: `10`)
+  - `RUN_REMAINING_MAX_BATCHES` (default: `20`)
+  - `DB_MIGRATIONS_DIR` (optional migration directory override)
 
 ### CD workflow
 

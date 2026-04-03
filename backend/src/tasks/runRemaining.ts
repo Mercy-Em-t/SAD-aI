@@ -35,7 +35,6 @@ async function processRemainingProjects(): Promise<number> {
       try {
         await projectStore.clearStages(project.id);
         await projectStore.update(project.id, {
-          status: 'running',
           completedAt: undefined,
           finalOutput: undefined,
         });
