@@ -220,7 +220,7 @@ class ProjectStore {
     );
   }
 
-  async getRemainingRunning(limit = 25): Promise<Project[]> {
+  async getIncompleteRunningProjects(limit = 25): Promise<Project[]> {
     const safeLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 25;
     const projectsResult = await query<{
       id: string;

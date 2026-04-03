@@ -23,7 +23,7 @@ async function processRemainingProjects(): Promise<number> {
   let totalProcessed = 0;
 
   for (let batch = 1; batch <= maxBatches; batch += 1) {
-    const remaining = await projectStore.getRemainingRunning(batchSize);
+    const remaining = await projectStore.getIncompleteRunningProjects(batchSize);
     if (remaining.length === 0) {
       break;
     }
@@ -67,4 +67,3 @@ main().catch(async (error) => {
   await pool.end();
   process.exit(1);
 });
-
