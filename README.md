@@ -75,6 +75,77 @@ OPENAI_API_KEY=your_key docker-compose up
 4. Watch agents work in real-time
 5. View generated diagrams and full system design output
 
+## Git Branching, CI/CD and Release Flow
+
+### Branch model
+
+- `main`: production/live branch only.
+- `develop`: integration and staging branch.
+- `feature/*`: feature development branches created from `develop`.
+- `hotfix/*`: urgent production fixes created from `main`.
+
+### Required branch protection (GitHub settings)
+
+Configure branch rules in GitHub for `main` and `develop`:
+
+- Require pull requests before merging (disable direct pushes).
+- Require status checks to pass:
+  - `Backend Build`
+  - `Frontend Lint and Build`
+- Require conversation resolution before merge.
+- For `main`, require at least 1 approving review.
+
+### CI workflow
+
+- Workflow file: `.github/workflows/ci.yml`
+- Runs on pull requests targeting `develop` and `main`.
+- Checks:
+  - Backend TypeScript build (`backend/npm run build`)
+  - Frontend lint + build (`frontend/npm run lint && npm run build`)
+- Uses npm dependency caching for faster runs.
+
+### CD workflow
+
+- Workflow file: `.github/workflows/deploy.yml`
+- Automatic deploy triggers:
+  - Push to `develop` → `staging` environment deploy
+  - Push to `main` → `production` environment deploy
+- Manual deploy trigger:
+  - `workflow_dispatch` with environment choice and optional image tag
+- Health check is required after deploy and fails the job if unhealthy.
+
+### Rollback workflow
+
+- Workflow file: `.github/workflows/rollback.yml`
+- Manual rollback trigger (`workflow_dispatch`) with:
+  - Target environment (`staging` or `production`)
+  - Previous successful `image_tag`
+- Performs rollback deploy webhook call, then verifies health check.
+
+### Environment and secret requirements
+
+In GitHub **Environments** (`staging`, `production`) set:
+
+- Environment variable:
+  - `HEALTHCHECK_URL` (example: `https://api.example.com/api/health`)
+- Environment secrets:
+  - `STAGING_DEPLOY_WEBHOOK_URL`
+  - `PRODUCTION_DEPLOY_WEBHOOK_URL`
+
+Set required reviewers on the `production` environment to enforce deployment approvals.
+
+### Team process
+
+1. Create branch from `develop`: `feature/<name>`.
+2. Open PR into `develop`.
+3. CI must pass before merge.
+4. Validate in staging.
+5. Open PR from `develop` into `main` for production promotion.
+6. For urgent production fixes:
+   - Create `hotfix/<name>` from `main`
+   - PR to `main`
+   - Back-merge to `develop`
+
 ## Security & Tenant Isolation
 
 > ✅ **Production-ready auth/session baseline**  

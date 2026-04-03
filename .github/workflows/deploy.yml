@@ -1,0 +1,88 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment for manual deploy"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      image_tag:
+        description: "Optional image tag to redeploy"
+        required: false
+        type: string
+
+concurrency:
+  group: deploy-${{ github.ref_name }}-${{ github.event.inputs.environment || '' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy application
+    runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'push' && (github.ref_name == 'develop' || github.ref_name == 'main')) ||
+      github.event_name == 'workflow_dispatch'
+    environment:
+      name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || (github.ref_name == 'main' && 'production' || 'staging') }}
+    permissions:
+      contents: read
+    env:
+      DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || (github.ref_name == 'main' && 'production' || 'staging') }}
+      IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
+      HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
+      STAGING_DEPLOY_WEBHOOK_URL: ${{ secrets.STAGING_DEPLOY_WEBHOOK_URL }}
+      PRODUCTION_DEPLOY_WEBHOOK_URL: ${{ secrets.PRODUCTION_DEPLOY_WEBHOOK_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve deploy webhook
+        id: webhook
+        run: |
+          if [ "${DEPLOY_ENV}" = "production" ]; then
+            echo "url=${PRODUCTION_DEPLOY_WEBHOOK_URL}" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=${STAGING_DEPLOY_WEBHOOK_URL}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate deployment configuration
+        run: |
+          if [ -z "${{ steps.webhook.outputs.url }}" ]; then
+            echo "Missing deploy webhook secret for ${DEPLOY_ENV}."
+            exit 1
+          fi
+          if [ -z "${HEALTHCHECK_URL}" ]; then
+            echo "Missing HEALTHCHECK_URL environment variable in ${DEPLOY_ENV} environment."
+            exit 1
+          fi
+
+      - name: Trigger deploy
+        run: |
+          curl --fail --show-error --silent \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"environment\":\"${DEPLOY_ENV}\",\"sha\":\"${GITHUB_SHA}\",\"image_tag\":\"${IMAGE_TAG}\"}" \
+            "${{ steps.webhook.outputs.url }}"
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 10); do
+            code=$(curl --silent --show-error --output /tmp/health.json --write-out "%{http_code}" "${HEALTHCHECK_URL}")
+            if [ "$code" = "200" ]; then
+              echo "Health check passed."
+              cat /tmp/health.json
+              exit 0
+            fi
+            echo "Health check attempt ${i}/10 failed with status ${code}. Retrying in 15s..."
+            sleep 15
+          done
+          echo "Health check failed after retries."
+          exit 1
