@@ -38,6 +38,8 @@ jobs:
       DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || (github.ref_name == 'main' && 'production' || 'staging') }}
       IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
       HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
+      HEALTHCHECK_RETRIES: ${{ vars.HEALTHCHECK_RETRIES || '10' }}
+      HEALTHCHECK_RETRY_DELAY_SECONDS: ${{ vars.HEALTHCHECK_RETRY_DELAY_SECONDS || '15' }}
       STAGING_DEPLOY_WEBHOOK_URL: ${{ secrets.STAGING_DEPLOY_WEBHOOK_URL }}
       PRODUCTION_DEPLOY_WEBHOOK_URL: ${{ secrets.PRODUCTION_DEPLOY_WEBHOOK_URL }}
     steps:
@@ -74,15 +76,15 @@ jobs:
 
       - name: Health check
         run: |
-          for i in $(seq 1 10); do
+          for i in $(seq 1 "${HEALTHCHECK_RETRIES}"); do
             code=$(curl --silent --show-error --output /tmp/health.json --write-out "%{http_code}" "${HEALTHCHECK_URL}")
             if [ "$code" = "200" ]; then
               echo "Health check passed."
               cat /tmp/health.json
               exit 0
             fi
-            echo "Health check attempt ${i}/10 failed with status ${code}. Retrying in 15s..."
-            sleep 15
+            echo "Health check attempt ${i}/${HEALTHCHECK_RETRIES} failed with status ${code}. Retrying in ${HEALTHCHECK_RETRY_DELAY_SECONDS}s..."
+            sleep "${HEALTHCHECK_RETRY_DELAY_SECONDS}"
           done
           echo "Health check failed after retries."
           exit 1

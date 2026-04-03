@@ -128,6 +128,8 @@ In GitHub **Environments** (`staging`, `production`) set:
 
 - Environment variable:
   - `HEALTHCHECK_URL` (example: `https://api.example.com/api/health`)
+  - `HEALTHCHECK_RETRIES` (optional, defaults to `10`)
+  - `HEALTHCHECK_RETRY_DELAY_SECONDS` (optional, defaults to `15`)
 - Environment secrets:
   - `STAGING_DEPLOY_WEBHOOK_URL`
   - `PRODUCTION_DEPLOY_WEBHOOK_URL`
