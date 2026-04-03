@@ -158,7 +158,7 @@ export default function NewProjectPage() {
               type="text"
               value={customReq}
               onChange={e => setCustomReq(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addRequirement())}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addRequirement(); } }}
               placeholder="Add a specific requirement and press Enter..."
               className="flex-1 border border-slate-300 rounded-lg px-4 py-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500"
             />

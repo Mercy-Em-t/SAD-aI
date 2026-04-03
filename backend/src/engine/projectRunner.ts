@@ -97,11 +97,12 @@ export class ProjectRunnerEngine {
     let result = await agentFn();
     let attempts = 1;
 
-    const avgScore = (result.score.completeness + result.score.clarity + result.score.standardCompliance) / 3;
+    let avgScore = (result.score.completeness + result.score.clarity + result.score.standardCompliance) / 3;
 
     while (avgScore < QUALITY_THRESHOLD && attempts < MAX_RETRIES) {
       console.log(`[Runner] Stage ${stageName} quality score ${avgScore} below threshold, retrying...`);
       result = await agentFn();
+      avgScore = (result.score.completeness + result.score.clarity + result.score.standardCompliance) / 3;
       attempts++;
     }
 

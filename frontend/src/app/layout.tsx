@@ -9,6 +9,8 @@ export const metadata: Metadata = {
   description: 'Transform structured input into professional system designs with AI',
 }
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 export default function RootLayout({
   children,
 }: {
@@ -36,7 +38,7 @@ export default function RootLayout({
           {children}
         </main>
         <footer className="bg-slate-900 text-slate-400 text-center text-sm py-6 mt-16">
-          <p>SAD-GENIUS AI — Multi-Agent System Engineer © {new Date().getFullYear()}</p>
+          <p>SAD-GENIUS AI — Multi-Agent System Engineer © {CURRENT_YEAR}</p>
         </footer>
       </body>
     </html>
