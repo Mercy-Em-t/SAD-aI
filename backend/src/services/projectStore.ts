@@ -11,6 +11,7 @@ export interface StageOutput {
 
 export interface Project {
   id: string;
+  userId: string;
   name: string;
   status: 'running' | 'completed' | 'failed';
   spec: Record<string, unknown>;
@@ -47,10 +48,12 @@ class ProjectStore {
     return this.projects.get(id);
   }
 
-  getAll(): Project[] {
-    return Array.from(this.projects.values()).sort(
+  getAllByUser(userId: string): Project[] {
+    return Array.from(this.projects.values())
+      .filter((project) => project.userId === userId)
+      .sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+      );
   }
 
   update(id: string, updates: Partial<Project>): Project | undefined {

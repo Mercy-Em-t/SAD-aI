@@ -28,6 +28,7 @@ export default function RootLayout({
           </div>
           <div className="flex gap-6 text-sm font-medium text-slate-300">
             <a href="/" className="hover:text-white transition-colors">Home</a>
+            <a href="/auth" className="hover:text-white transition-colors">Login</a>
             <a href="/projects" className="hover:text-white transition-colors">Projects</a>
             <a href="/new" className="bg-sky-600 hover:bg-sky-500 text-white px-4 py-2 rounded-lg transition-colors">
               + New Project

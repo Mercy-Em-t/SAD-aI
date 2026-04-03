@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import axios from 'axios'
+import { apiClient } from '../../lib/api'
+import AuthGate from '../../components/AuthGate'
 
 const projectTypes = [
   'Web Application', 'Mobile App', 'API / Microservice', 'Desktop App',
@@ -72,11 +73,10 @@ export default function NewProjectPage() {
     setLoading(true)
     setError('')
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-      const res = await axios.post(`${apiUrl}/api/projects`, form)
+      const res = await apiClient.post('/api/projects', form)
       router.push(`/projects/${res.data.project.id}`)
     } catch (err: unknown) {
-      const msg = axios.isAxiosError(err) ? err.response?.data?.error || err.message : 'Something went wrong'
+      const msg = 'Could not create project. Please login again if your session expired.'
       setError(msg)
       setLoading(false)
     }
@@ -84,6 +84,7 @@ export default function NewProjectPage() {
 
   return (
     <div className="max-w-3xl mx-auto py-12 px-6">
+      <AuthGate />
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">🧾 New System Spec</h1>
         <p className="text-slate-500">Fill in your project details and AI agents will generate a complete system design.</p>

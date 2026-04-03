@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import axios from 'axios'
 import dynamic from 'next/dynamic'
+import { apiClient } from '../../../lib/api'
+import AuthGate from '../../../components/AuthGate'
 
 const MermaidDiagram = dynamic(() => import('../../../components/MermaidDiagram'), { ssr: false })
 
@@ -117,8 +118,7 @@ export default function ProjectDetailPage() {
 
   const fetchProject = useCallback(async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-      const res = await axios.get(`${apiUrl}/api/projects/${projectId}`)
+      const res = await apiClient.get(`/api/projects/${projectId}`)
       setProject(res.data.project)
     } catch {
       // ignore
@@ -142,6 +142,7 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="max-w-5xl mx-auto py-12 px-6">
+      <AuthGate />
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-start justify-between">

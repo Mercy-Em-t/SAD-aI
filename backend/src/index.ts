@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import projectsRouter from './routes/projects';
 import healthRouter from './routes/health';
+import authRouter from './routes/auth';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 app.use('/api/health', healthRouter);
+app.use('/api/auth', authRouter);
 app.use('/api/projects', projectsRouter);
 
 app.listen(PORT, () => {

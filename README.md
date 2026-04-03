@@ -73,3 +73,13 @@ OPENAI_API_KEY=your_key docker-compose up
 3. Launch the AI pipeline
 4. Watch agents work in real-time
 5. View generated diagrams and full system design output
+
+## Security & Tenant Isolation
+
+- Authentication endpoints:
+  - `POST /api/auth/register`
+  - `POST /api/auth/login`
+  - `GET /api/auth/me`
+- Project endpoints now require `Authorization: Bearer <token>`.
+- Each project is bound to the authenticated user (`userId`), and users can only list/read/create their own projects.
+- Cross-account access is denied (non-owned project IDs return not found).

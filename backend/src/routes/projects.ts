@@ -3,8 +3,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { ProjectRunnerEngine } from '../engine/projectRunner';
 import { projectStore } from '../services/projectStore';
 import { z } from 'zod';
+import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
 
 const router = Router();
+router.use(requireAuth);
 
 const SpecFormSchema = z.object({
   projectName: z.string().min(1),
@@ -18,28 +20,32 @@ const SpecFormSchema = z.object({
 });
 
 // GET /api/projects - list all projects
-router.get('/', (_req: Request, res: Response) => {
-  const projects = projectStore.getAll();
+router.get('/', (req: AuthenticatedRequest, res: Response) => {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+  const projects = projectStore.getAllByUser(req.user.id);
   res.json({ projects });
 });
 
 // GET /api/projects/:id - get project detail
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', (req: AuthenticatedRequest, res: Response) => {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required' });
   const project = projectStore.getById(req.params.id);
-  if (!project) {
+  if (!project || project.userId !== req.user.id) {
     return res.status(404).json({ error: 'Project not found' });
   }
   res.json({ project });
 });
 
 // POST /api/projects - create and run a new project
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!req.user) return res.status(401).json({ error: 'Authentication required' });
     const spec = SpecFormSchema.parse(req.body);
     const projectId = uuidv4();
     
     const project = projectStore.create({
       id: projectId,
+      userId: req.user.id,
       name: spec.projectName,
       status: 'running',
       spec,

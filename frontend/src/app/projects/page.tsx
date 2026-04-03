@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import axios from 'axios'
+import { apiClient } from '../../lib/api'
+import AuthGate from '../../components/AuthGate'
 
 interface Project {
   id: string
@@ -32,8 +33,7 @@ export default function ProjectsPage() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-        const res = await axios.get(`${apiUrl}/api/projects`)
+        const res = await apiClient.get('/api/projects')
         setProjects(res.data.projects)
       } catch {
         // ignore
@@ -48,6 +48,7 @@ export default function ProjectsPage() {
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-6">
+      <AuthGate />
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 mb-1">📁 Projects</h1>
