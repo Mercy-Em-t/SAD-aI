@@ -30,7 +30,7 @@ SAD-GENIUS AI uses a pipeline of 5 specialized AI agents to generate:
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14, TypeScript, Tailwind CSS, Mermaid.js
+- **Frontend**: Next.js 15, TypeScript, Tailwind CSS, Mermaid.js
 - **Backend**: Node.js, Express, TypeScript
 - **AI**: OpenAI API (GPT-4o-mini)
 - **Database**: PostgreSQL
@@ -76,6 +76,10 @@ OPENAI_API_KEY=your_key docker-compose up
 
 ## Security & Tenant Isolation
 
+> ⚠️ **IMPORTANT (Production)**  
+> The current implementation uses an in-memory auth/session store and frontend `localStorage` token storage for prototype simplicity.  
+> Before production deployment, migrate to persistent PostgreSQL-backed auth/session storage and secure `httpOnly` cookie-based auth.
+
 - Authentication endpoints:
   - `POST /api/auth/register`
   - `POST /api/auth/login`
@@ -83,3 +87,10 @@ OPENAI_API_KEY=your_key docker-compose up
 - Project endpoints now require `Authorization: Bearer <token>`.
 - Each project is bound to the authenticated user (`userId`), and users can only list/read/create their own projects.
 - Cross-account access is denied (non-owned project IDs return not found).
+- Session lifetime is configurable with `AUTH_SESSION_DURATION_MS` (defaults to 2 hours).
+- In production builds, insecure localStorage auth is blocked by default unless `NEXT_PUBLIC_ALLOW_INSECURE_LOCALSTORAGE_AUTH=true` is explicitly set.
+
+### Production security notes
+
+- Current auth/user/session storage is in-memory and resets on restart; replace with persistent PostgreSQL-backed auth/session storage before production deployment.
+- Current frontend stores bearer token in `localStorage` for simplicity; for production SaaS, move to secure `httpOnly` cookies and apply strong CSP/XSS protections.

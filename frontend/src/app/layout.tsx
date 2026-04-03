@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: 'Transform structured input into professional system designs with AI',
 }
 
-const CURRENT_YEAR = new Date().getFullYear();
+const CURRENT_YEAR = new Date().getFullYear()
 
 export default function RootLayout({
   children,

@@ -14,7 +14,21 @@ interface Session {
   expiresAt: number;
 }
 
-const SESSION_DURATION_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_SESSION_DURATION_HOURS = 2;
+const DEFAULT_SESSION_DURATION_MS = DEFAULT_SESSION_DURATION_HOURS * 60 * 60 * 1000;
+const MAX_SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+const configuredSessionDurationMs = Number(process.env.AUTH_SESSION_DURATION_MS);
+const isConfiguredSessionDurationValid = Number.isFinite(configuredSessionDurationMs) && configuredSessionDurationMs > 0;
+const SESSION_DURATION_MS = isConfiguredSessionDurationValid
+  ? Math.min(configuredSessionDurationMs, MAX_SESSION_DURATION_MS)
+  : DEFAULT_SESSION_DURATION_MS;
+
+if (process.env.AUTH_SESSION_DURATION_MS && !isConfiguredSessionDurationValid) {
+  console.warn('Invalid AUTH_SESSION_DURATION_MS. Falling back to default 2-hour session duration.');
+}
+if (isConfiguredSessionDurationValid && configuredSessionDurationMs > MAX_SESSION_DURATION_MS) {
+  console.warn('AUTH_SESSION_DURATION_MS exceeds max allowed value. Capping to 30 days.');
+}
 
 class AuthStore {
   private usersById: Map<string, User> = new Map();
@@ -52,7 +66,11 @@ class AuthStore {
     if (!user) return null;
 
     const providedHash = this.hashPassword(password, user.salt);
-    if (!crypto.timingSafeEqual(Buffer.from(providedHash), Buffer.from(user.passwordHash))) {
+    const providedHashBuffer = Buffer.from(providedHash);
+    const storedHashBuffer = Buffer.from(user.passwordHash);
+    const sameLength = providedHashBuffer.length === storedHashBuffer.length;
+    const safeProvidedHashBuffer = sameLength ? providedHashBuffer : crypto.randomBytes(storedHashBuffer.length);
+    if (!crypto.timingSafeEqual(safeProvidedHashBuffer, storedHashBuffer) || !sameLength) {
       return null;
     }
 

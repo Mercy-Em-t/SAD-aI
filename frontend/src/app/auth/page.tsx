@@ -37,12 +37,12 @@ export default function AuthPage() {
         {error && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg mb-4 text-sm">{error}</div>}
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-            <input value={email} onChange={e => setEmail(e.target.value)} type="email" required className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+            <input id="email" aria-label="Email" value={email} onChange={e => setEmail(e.target.value)} type="email" required className="w-full border border-slate-300 rounded-lg px-3 py-2" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-            <input value={password} onChange={e => setPassword(e.target.value)} type="password" minLength={8} required className="w-full border border-slate-300 rounded-lg px-3 py-2" />
+            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+            <input id="password" aria-label="Password" value={password} onChange={e => setPassword(e.target.value)} type="password" minLength={8} required className="w-full border border-slate-300 rounded-lg px-3 py-2" />
           </div>
           <button disabled={loading} className="w-full bg-sky-600 text-white py-2.5 rounded-lg font-semibold hover:bg-sky-500 disabled:opacity-60">
             {loading ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create Account'}

@@ -5,6 +5,18 @@ export interface AuthUser {
 
 const TOKEN_KEY = 'sad_genius_token';
 const USER_KEY = 'sad_genius_user';
+// Development-only storage approach:
+// localStorage is used for simplicity in this prototype.
+// For production SaaS deployments, migrate auth token handling to secure httpOnly cookies.
+const ALLOW_INSECURE_LOCALSTORAGE_AUTH = process.env.NEXT_PUBLIC_ALLOW_INSECURE_LOCALSTORAGE_AUTH === 'true';
+
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production' && !ALLOW_INSECURE_LOCALSTORAGE_AUTH) {
+  throw new Error('SAD-GENIUS security enforcement: localStorage auth disabled in production. Use secure httpOnly cookie auth.');
+}
+
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production' && ALLOW_INSECURE_LOCALSTORAGE_AUTH) {
+  console.warn('SAD-GENIUS security warning: localStorage auth is enabled. Migrate to httpOnly cookies before production rollout.');
+}
 
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;

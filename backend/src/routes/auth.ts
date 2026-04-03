@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { authStore } from '../services/authStore';
-import { AuthenticatedRequest, requireAuth } from '../middleware/auth';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -9,6 +9,14 @@ const CredentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
 });
+
+function requireAuthenticatedUser(req: Request, res: Response): { id: string; email: string } | null {
+  if (!req.user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return null;
+  }
+  return req.user;
+}
 
 router.post('/register', (req: Request, res: Response) => {
   try {
@@ -49,9 +57,10 @@ router.post('/login', (req: Request, res: Response) => {
   }
 });
 
-router.get('/me', requireAuth, (req: AuthenticatedRequest, res: Response) => {
-  if (!req.user) return res.status(401).json({ error: 'Authentication required' });
-  return res.json({ user: { id: req.user.id, email: req.user.email } });
+router.get('/me', requireAuth, (req: Request, res: Response) => {
+  const user = requireAuthenticatedUser(req, res);
+  if (!user) return;
+  return res.json({ user: { id: user.id, email: user.email } });
 });
 
 export default router;

@@ -76,7 +76,7 @@ export default function NewProjectPage() {
       const res = await apiClient.post('/api/projects', form)
       router.push(`/projects/${res.data.project.id}`)
     } catch (err: unknown) {
-      const msg = 'Could not create project. Please login again if your session expired.'
+      const msg = 'Could not create project. Please try again, and login again if your session expired.'
       setError(msg)
       setLoading(false)
     }
