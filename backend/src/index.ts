@@ -1,8 +1,7 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
-dotenv.config();
 import projectsRouter from './routes/projects';
 import healthRouter from './routes/health';
 import authRouter from './routes/auth';

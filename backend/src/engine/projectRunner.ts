@@ -5,14 +5,15 @@ import { TestingAgent } from '../agents/testingAgent';
 import { DocumentationAgent } from '../agents/documentationAgent';
 import { diagramEngine } from '../services/diagramEngine';
 import { projectStore } from '../services/projectStore';
+import { ProjectSpec, FinalProjectOutput } from '../types/models';
 
 const QUALITY_THRESHOLD = 7;
 const MAX_RETRIES = 2;
 
 export class ProjectRunnerEngine {
   private projectId: string;
-  private spec: Record<string, unknown>;
-  private context: Record<string, unknown> = {};
+  private spec: ProjectSpec;
+  private context: any = {};
 
   private requirementsAgent = new RequirementsAgent();
   private modelingAgent = new ModelingAgent();
@@ -20,7 +21,7 @@ export class ProjectRunnerEngine {
   private testingAgent = new TestingAgent();
   private documentationAgent = new DocumentationAgent();
 
-  constructor(projectId: string, spec: Record<string, unknown>) {
+  constructor(projectId: string, spec: ProjectSpec) {
     this.projectId = projectId;
     this.spec = spec;
   }
@@ -65,15 +66,15 @@ export class ProjectRunnerEngine {
       this.context.documentation = documentationResult.output;
 
       // Generate diagrams from model
-      const diagrams = diagramEngine.generateDiagrams(this.context.model as Record<string, unknown>);
+      const diagrams = diagramEngine.generateDiagrams(this.context.model as any);
 
       // Compile final output
-      const finalOutput = {
-        requirements: requirementsResult.output,
-        systemModel: modelingResult.output,
-        design: designResult.output,
-        testCases: testingResult.output,
-        documentation: documentationResult.output,
+      const finalOutput: FinalProjectOutput = {
+        requirements: requirementsResult.output as any,
+        systemModel: modelingResult.output as any,
+        design: designResult.output as any,
+        testCases: testingResult.output as any,
+        documentation: documentationResult.output as any,
         diagrams,
       };
 
@@ -95,8 +96,8 @@ export class ProjectRunnerEngine {
 
   private async runWithRetry(
     stageName: string,
-    agentFn: () => Promise<{ output: Record<string, unknown>; score: { completeness: number; clarity: number; standardCompliance: number } }>
-  ): Promise<{ output: Record<string, unknown>; score: { completeness: number; clarity: number; standardCompliance: number } }> {
+    agentFn: () => Promise<{ output: any; score: { completeness: number; clarity: number; standardCompliance: number } }>
+  ): Promise<{ output: any; score: { completeness: number; clarity: number; standardCompliance: number } }> {
     let result = await agentFn();
     let attempts = 1;
 

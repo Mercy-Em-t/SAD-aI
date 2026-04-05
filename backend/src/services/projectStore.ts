@@ -1,42 +1,5 @@
-export interface StageOutput {
-  stage: string;
-  output: Record<string, unknown>;
-  score: {
-    completeness: number;
-    clarity: number;
-    standardCompliance: number;
-  };
-  completedAt: string;
-}
-
-export interface Project {
-  id: string;
-  userId: string;
-  name: string;
-  status: 'running' | 'completed' | 'failed';
-  spec: Record<string, unknown>;
-  stages: StageOutput[];
-  finalOutput?: FinalOutput;
-  createdAt: string;
-  completedAt?: string;
-}
-
-export interface FinalOutput {
-  requirements: Record<string, unknown>;
-  systemModel: Record<string, unknown>;
-  design: Record<string, unknown>;
-  testCases: Record<string, unknown>;
-  documentation: Record<string, unknown>;
-  diagrams: DiagramOutput[];
-}
-
-export interface DiagramOutput {
-  type: string;
-  title: string;
-  mermaid: string;
-}
-
 import { query } from '../db/client';
+import { Project, FinalProjectOutput, ProjectStage } from '../types/models';
 
 const DEFAULT_INCOMPLETE_RUNNING_PROJECTS_LIMIT = 25;
 
@@ -56,8 +19,8 @@ class ProjectStore {
       user_id: string;
       name: string;
       status: 'running' | 'completed' | 'failed';
-      spec: Record<string, unknown>;
-      final_output: FinalOutput | null;
+      spec: any;
+      final_output: FinalProjectOutput | null;
       created_at: string;
       completed_at: string | null;
     }>(
@@ -72,7 +35,7 @@ class ProjectStore {
 
     const stagesResult = await query<{
       stage: string;
-      output_json: Record<string, unknown>;
+      output_json: any;
       score_completeness: string | number | null;
       score_clarity: string | number | null;
       score_standard_compliance: string | number | null;
@@ -85,7 +48,7 @@ class ProjectStore {
       [id]
     );
 
-    const stages: StageOutput[] = stagesResult.rows.map((stageRow) => ({
+    const stages: ProjectStage[] = stagesResult.rows.map((stageRow) => ({
       stage: stageRow.stage,
       output: stageRow.output_json,
       score: {
@@ -115,8 +78,8 @@ class ProjectStore {
       user_id: string;
       name: string;
       status: 'running' | 'completed' | 'failed';
-      spec: Record<string, unknown>;
-      final_output: FinalOutput | null;
+      spec: any;
+      final_output: FinalProjectOutput | null;
       created_at: string;
       completed_at: string | null;
     }>(
@@ -133,7 +96,7 @@ class ProjectStore {
     const stagesResult = await query<{
       project_id: string;
       stage: string;
-      output_json: Record<string, unknown>;
+      output_json: any;
       score_completeness: string | number | null;
       score_clarity: string | number | null;
       score_standard_compliance: string | number | null;
@@ -146,7 +109,7 @@ class ProjectStore {
       [ids]
     );
 
-    const stagesByProject = new Map<string, StageOutput[]>();
+    const stagesByProject = new Map<string, ProjectStage[]>();
     for (const stageRow of stagesResult.rows) {
       const list = stagesByProject.get(stageRow.project_id) ?? [];
       list.push({
@@ -199,7 +162,7 @@ class ProjectStore {
     return this.getById(id);
   }
 
-  async addStage(id: string, stage: StageOutput): Promise<void> {
+  async addStage(id: string, stage: ProjectStage): Promise<void> {
     await query(
       `INSERT INTO stages (
         project_id,
@@ -231,8 +194,8 @@ class ProjectStore {
       user_id: string;
       name: string;
       status: 'running' | 'completed' | 'failed';
-      spec: Record<string, unknown>;
-      final_output: FinalOutput | null;
+      spec: any;
+      final_output: FinalProjectOutput | null;
       created_at: string;
       completed_at: string | null;
     }>(
@@ -250,7 +213,7 @@ class ProjectStore {
     const stagesResult = await query<{
       project_id: string;
       stage: string;
-      output_json: Record<string, unknown>;
+      output_json: any;
       score_completeness: string | number | null;
       score_clarity: string | number | null;
       score_standard_compliance: string | number | null;
@@ -263,7 +226,7 @@ class ProjectStore {
       [ids]
     );
 
-    const stagesByProject = new Map<string, StageOutput[]>();
+    const stagesByProject = new Map<string, ProjectStage[]>();
     for (const stageRow of stagesResult.rows) {
       const list = stagesByProject.get(stageRow.project_id) ?? [];
       list.push({

@@ -4,6 +4,7 @@ import { ProjectRunnerEngine } from '../engine/projectRunner';
 import { projectStore } from '../services/projectStore';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth';
+import { ProjectSpec } from '../types/models';
 
 const router = Router();
 router.use(requireAuth);
@@ -51,7 +52,7 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const user = requireAuthenticatedUser(req, res);
     if (!user) return;
-    const spec = SpecFormSchema.parse(req.body);
+    const spec = SpecFormSchema.parse(req.body) as ProjectSpec;
     const projectId = uuidv4();
     
     const project = await projectStore.create({
