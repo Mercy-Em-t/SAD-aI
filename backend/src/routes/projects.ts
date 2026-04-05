@@ -9,7 +9,7 @@ import { ProjectSpec } from '../types/models';
 const router = Router();
 router.use(requireAuth);
 
-function requireAuthenticatedUser(req: Request, res: Response): { id: string; email: string } | null {
+function requireAuthenticatedUser(req: Request, res: Response): { id: string; email: string; role: 'admin' | 'user'; balance: number } | null {
   if (!req.user) {
     res.status(401).json({ error: 'Authentication required' });
     return null;
@@ -54,6 +54,18 @@ router.post('/', async (req: Request, res: Response) => {
     if (!user) return;
     const spec = SpecFormSchema.parse(req.body) as ProjectSpec;
     const projectId = uuidv4();
+
+    // SaaS: Token Check
+    const TOKEN_COST = 2;
+    if (user.role !== 'admin' && user.balance < TOKEN_COST) {
+      return res.status(403).json({ error: 'Insufficient tokens. Please contact an admin to refill.' });
+    }
+
+    // SaaS: Deduct Tokens (Admins have infinite but we can still track or skip)
+    if (user.role !== 'admin') {
+      const { authStore } = await import('../services/authStore');
+      await authStore.updateBalance(user.id, -TOKEN_COST);
+    }
     
     const project = await projectStore.create({
       id: projectId,
@@ -80,6 +92,27 @@ router.post('/', async (req: Request, res: Response) => {
     if (err instanceof z.ZodError) {
       return res.status(400).json({ error: 'Invalid input', details: err.errors });
     }
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/projects/:id/resume - Resume a paused pipeline
+router.post('/:id/resume', async (req: Request, res: Response) => {
+  try {
+    const user = requireAuthenticatedUser(req, res);
+    if (!user) return;
+
+    const project = await projectStore.getById(req.params.id);
+    if (!project || project.userId !== user.id) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Setting status to 'running' signals the ProjectRunnerEngine's waitForGuidance loop to continue
+    await projectStore.update(project.id, { status: 'running' });
+
+    res.json({ message: 'Pipeline resumed' });
+  } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
   }

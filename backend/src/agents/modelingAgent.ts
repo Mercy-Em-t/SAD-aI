@@ -18,7 +18,7 @@ Return a JSON object with:
     );
   }
 
-  async run(spec: Record<string, unknown>, context?: Record<string, unknown>): Promise<AgentResult> {
+  async run(spec: any, context?: any): Promise<AgentResult> {
     const prompt = `Create a complete system model for this project:
 Spec: ${JSON.stringify(spec, null, 2)}
 Requirements: ${JSON.stringify(context?.requirements || {}, null, 2)}

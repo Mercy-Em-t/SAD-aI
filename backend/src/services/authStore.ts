@@ -6,6 +6,9 @@ export interface User {
   email: string;
   passwordHash: string;
   salt: string;
+  role: 'admin' | 'user';
+  balance: number;
+  subscriptionStatus?: string;
   createdAt: string;
 }
 
@@ -45,6 +48,8 @@ class AuthStore {
       email: normalizedEmail,
       passwordHash,
       salt,
+      role: 'user', // Default value
+      balance: 10,  // Default value
       createdAt: new Date().toISOString(),
     };
 
@@ -62,9 +67,12 @@ class AuthStore {
       email: string;
       password_hash: string;
       salt: string;
+      role: 'admin' | 'user';
+      balance: number;
+      subscription_status: string | null;
       created_at: string;
     }>(
-      'SELECT id, email, password_hash, salt, created_at FROM users WHERE email = $1 LIMIT 1',
+      'SELECT id, email, password_hash, salt, role, balance, subscription_status, created_at FROM users WHERE email = $1 LIMIT 1',
       [normalizedEmail]
     );
     if (!found.rowCount || found.rowCount === 0) return null;
@@ -74,6 +82,9 @@ class AuthStore {
       email: row.email,
       passwordHash: row.password_hash,
       salt: row.salt,
+      role: row.role,
+      balance: row.balance,
+      subscriptionStatus: row.subscription_status ?? undefined,
       createdAt: new Date(row.created_at).toISOString(),
     };
 
@@ -109,10 +120,13 @@ class AuthStore {
       email: string;
       password_hash: string;
       salt: string;
+      role: 'admin' | 'user';
+      balance: number;
+      subscription_status: string | null;
       created_at: string;
       expires_at: string;
     }>(
-      `SELECT u.id, u.email, u.password_hash, u.salt, u.created_at, s.expires_at
+      `SELECT u.id, u.email, u.password_hash, u.salt, u.role, u.balance, u.subscription_status, u.created_at, s.expires_at
        FROM sessions s
        JOIN users u ON u.id = s.user_id
        WHERE s.token = $1
@@ -130,12 +144,43 @@ class AuthStore {
       email: row.email,
       passwordHash: row.password_hash,
       salt: row.salt,
+      role: row.role,
+      balance: row.balance,
+      subscriptionStatus: row.subscription_status ?? undefined,
       createdAt: new Date(row.created_at).toISOString(),
     };
   }
 
   async revokeToken(token: string): Promise<void> {
     await query('DELETE FROM sessions WHERE token = $1', [token]);
+  }
+
+  async updateBalance(userId: string, delta: number): Promise<void> {
+    await query('UPDATE users SET balance = balance + $1 WHERE id = $2', [delta, userId]);
+  }
+
+  async setRole(userId: string, role: 'admin' | 'user'): Promise<void> {
+    await query('UPDATE users SET role = $1 WHERE id = $2', [role, userId]);
+  }
+
+  async getAllUsers(): Promise<Omit<User, 'passwordHash' | 'salt'>[]> {
+    const res = await query<{
+      id: string;
+      email: string;
+      role: 'admin' | 'user';
+      balance: number;
+      subscription_status: string | null;
+      created_at: string;
+    }>('SELECT id, email, role, balance, subscription_status, created_at FROM users ORDER BY created_at DESC');
+    
+    return res.rows.map(row => ({
+      id: row.id,
+      email: row.email,
+      role: row.role,
+      balance: row.balance,
+      subscriptionStatus: row.subscription_status ?? undefined,
+      createdAt: new Date(row.created_at).toISOString(),
+    }));
   }
 
   private hashPassword(password: string, salt: string): string {

@@ -255,6 +255,24 @@ class ProjectStore {
     }));
   }
 
+  async getKnowledgeBase(userId: string): Promise<string> {
+    // Get user-specific and global (admin) KB entries
+    const res = await query<{ content: string }>(
+      `SELECT content FROM knowledge_base 
+       WHERE user_id = $1 OR user_id IN (SELECT id FROM users WHERE role = 'admin')
+       ORDER BY created_at ASC`,
+      [userId]
+    );
+    return res.rows.map(r => r.content).join('\n\n---\n\n');
+  }
+
+  async addKnowledgeBase(userId: string, content: string): Promise<void> {
+    await query(
+      'INSERT INTO knowledge_base (id, user_id, content) VALUES ($1, $2, $3)',
+      [crypto.randomUUID(), userId, content]
+    );
+  }
+
   async clearStages(projectId: string): Promise<void> {
     await query('DELETE FROM stages WHERE project_id = $1', [projectId]);
   }

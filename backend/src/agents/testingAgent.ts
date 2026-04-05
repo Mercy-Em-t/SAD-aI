@@ -19,7 +19,7 @@ Return a JSON object with:
     );
   }
 
-  async run(spec: Record<string, unknown>, context?: Record<string, unknown>): Promise<AgentResult> {
+  async run(spec: any, context?: any): Promise<AgentResult> {
     const prompt = `Create a comprehensive test plan for this system:
 Spec: ${JSON.stringify(spec, null, 2)}
 Design: ${JSON.stringify(context?.design || {}, null, 2)}

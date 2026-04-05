@@ -33,7 +33,7 @@ interface FinalOutput {
 interface Project {
   id: string
   name: string
-  status: 'running' | 'completed' | 'failed'
+  status: 'running' | 'completed' | 'failed' | 'pending_guidance'
   spec: Record<string, unknown>
   stages: StageOutput[]
   finalOutput?: FinalOutput
@@ -153,18 +153,37 @@ export default function ProjectDetailPage() {
           <span className={`px-4 py-2 rounded-xl text-sm font-bold ${
             project.status === 'completed' ? 'bg-green-100 text-green-700' :
             project.status === 'failed' ? 'bg-red-100 text-red-700' :
+            project.status === 'pending_guidance' ? 'bg-violet-100 text-violet-700 animate-pulse' :
             'bg-amber-100 text-amber-700'
           }`}>
             {project.status === 'running' ? '⚙️ Running...' :
+             project.status === 'pending_guidance' ? '✋ Waiting for Guidance' :
              project.status === 'completed' ? '✅ Completed' : '❌ Failed'}
           </span>
         </div>
       </div>
 
       {/* Pipeline Progress */}
-      {project.status === 'running' && (
-        <div className="bg-sky-50 border border-sky-200 rounded-2xl p-5 mb-8">
-          <p className="text-sky-800 font-semibold mb-3">⚙️ AI Pipeline Running...</p>
+      {(project.status === 'running' || project.status === 'pending_guidance') && (
+        <div className={`rounded-2xl p-5 mb-8 border ${
+          project.status === 'pending_guidance' ? 'bg-violet-50 border-violet-200' : 'bg-sky-50 border-sky-200'
+        }`}>
+          <div className="flex items-center justify-between mb-3">
+            <p className={project.status === 'pending_guidance' ? 'text-violet-800 font-bold' : 'text-sky-800 font-semibold'}>
+              {project.status === 'pending_guidance' ? '✋ Pipeline Paused: Awaiting Your Review' : '⚙️ AI Pipeline Running...'}
+            </p>
+            {project.status === 'pending_guidance' && (
+              <button 
+                onClick={async () => {
+                  await apiClient.post(`/api/projects/${project.id}/resume`)
+                  fetchProject()
+                }}
+                className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg transition-transform hover:scale-105"
+              >
+                ▶ Resume Pipeline
+              </button>
+            )}
+          </div>
           <div className="flex gap-2">
             {allStages.map(stage => {
               const info = stageInfo[stage]

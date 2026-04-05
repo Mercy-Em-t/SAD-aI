@@ -7,6 +7,7 @@ export interface ProjectSpec {
   modules?: string[];
   integrations?: string[];
   outputExpectations?: string[];
+  guidanceEnabled?: boolean;
 }
 
 export interface RequirementSet {
@@ -106,7 +107,7 @@ export interface Project {
   id: string;
   userId: string;
   name: string;
-  status: 'running' | 'completed' | 'failed';
+  status: 'running' | 'completed' | 'failed' | 'pending_guidance';
   spec: ProjectSpec;
   stages: ProjectStage[];
   finalOutput?: FinalProjectOutput;

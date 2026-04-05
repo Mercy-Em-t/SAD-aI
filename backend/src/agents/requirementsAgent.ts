@@ -17,7 +17,7 @@ Return a JSON object with:
     );
   }
 
-  async run(spec: Record<string, unknown>): Promise<AgentResult> {
+  async run(spec: any, context?: any): Promise<AgentResult> {
     const prompt = `Analyze this project specification and extract all requirements:
 ${JSON.stringify(spec, null, 2)}
 

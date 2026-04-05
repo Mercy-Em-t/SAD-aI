@@ -1,9 +1,10 @@
 import OpenAI from 'openai';
+import { ProjectSpec } from '../types/models';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface AgentResult {
-  output: Record<string, unknown>;
+  output: any;
   score: {
     completeness: number;
     clarity: number;
@@ -20,13 +21,17 @@ export abstract class BaseAgent {
     this.systemPrompt = systemPrompt;
   }
 
-  protected async callOpenAI(userMessage: string, retries = 3): Promise<string> {
+  protected async callOpenAI(userMessage: string, context?: any, retries = 3): Promise<string> {
+    const finalSystemPrompt = context?.knowledgeBase 
+      ? `${this.systemPrompt}\n\n### ADDITIONAL KNOWLEDGE BASE:\n${context.knowledgeBase}`
+      : this.systemPrompt;
+
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         const response = await openai.chat.completions.create({
           model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
           messages: [
-            { role: 'system', content: this.systemPrompt },
+            { role: 'system', content: finalSystemPrompt },
             { role: 'user', content: userMessage },
           ],
           response_format: { type: 'json_object' },
@@ -41,7 +46,7 @@ export abstract class BaseAgent {
     return '{}';
   }
 
-  protected parseJSON(text: string): Record<string, unknown> {
+  protected parseJSON(text: string): any {
     try {
       return JSON.parse(text);
     } catch {
@@ -49,5 +54,5 @@ export abstract class BaseAgent {
     }
   }
 
-  abstract run(spec: Record<string, unknown>, context?: Record<string, unknown>): Promise<AgentResult>;
+  abstract run(spec: ProjectSpec, context?: any): Promise<AgentResult>;
 }
